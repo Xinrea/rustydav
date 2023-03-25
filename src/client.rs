@@ -32,17 +32,23 @@ impl Client {
     /// Initialization of the client
     ///
     /// Initialized client will be stored for future requests
-    pub fn init(username: &str, password: &str) -> Self {
+    pub fn init(username: &str, password: &str, timeout: u64) -> Self {
         Client {
             username: username.to_owned(),
             password: password.to_owned(),
-            client: reqwest::blocking::Client::new(),
+            client: reqwest::blocking::ClientBuilder::new()
+                .timeout(std::time::Duration::from_secs(timeout))
+                .build()
+                .unwrap(),
         }
     }
 
     fn custom_header(&self, name: &str, value: &str) -> header::HeaderMap {
         let mut headers = header::HeaderMap::new();
-        headers.insert(header::HeaderName::from_bytes(name.as_bytes()).unwrap(), header::HeaderValue::from_bytes(value.as_bytes()).unwrap());
+        headers.insert(
+            header::HeaderName::from_bytes(name.as_bytes()).unwrap(),
+            header::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+        );
         headers
     }
 
@@ -64,8 +70,7 @@ impl Client {
     ///
     /// Use absolute path to the webdav server file location
     pub fn get(&self, path: &str) -> Result<Response, Error> {
-        self.start_request(Method::GET, path)
-            .send()
+        self.start_request(Method::GET, path).send()
     }
 
     /// Upload a file/zip on Webdav server
@@ -85,8 +90,7 @@ impl Client {
     ///
     /// Use absolute path to the webdav server file location
     pub fn delete(&self, path: &str) -> Result<Response, Error> {
-        self.start_request(Method::DELETE, path)
-            .send()
+        self.start_request(Method::DELETE, path).send()
     }
 
     /// Unzips the .zip archieve on Webdav server
@@ -149,7 +153,7 @@ mod tests {
     }
 
     fn get_client() -> Client {
-        Client::init("", "")
+        Client::init("", "", 10)
     }
 
     #[test]
@@ -163,7 +167,10 @@ mod tests {
     #[test]
     fn test_2_put() {
         let webdav_client = get_client();
-        let result = webdav_client.put("rustydav is a cool small library", get_server_path("rustydav/test.txt").as_str());
+        let result = webdav_client.put(
+            "rustydav is a cool small library",
+            get_server_path("rustydav/test.txt").as_str(),
+        );
 
         assert_eq!(result.is_ok(), true);
     }
@@ -179,7 +186,10 @@ mod tests {
     #[test]
     fn test_4_mv() {
         let webdav_client = get_client();
-        let result = webdav_client.mv(get_server_path("rustydav/test.txt").as_str(), get_server_path("test.txt").as_str());
+        let result = webdav_client.mv(
+            get_server_path("rustydav/test.txt").as_str(),
+            get_server_path("test.txt").as_str(),
+        );
 
         assert_eq!(result.is_ok(), true);
     }
